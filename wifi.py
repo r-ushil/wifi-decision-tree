@@ -3,9 +3,16 @@ import numpy as np
 LABEL_INDEX: int = 7
 
 
+
+class Decision:
+
+  def __init__(self, emitter: int, value: int):
+    self.emitter = emitter
+    self.value = value
+
 class TreeNode:
 
-  def __init__(self, label: bool | int, depth: int):
+  def __init__(self, label: Decision | int, depth: int):
     self.left = None
     self.right = None
     self.label = label
@@ -30,9 +37,24 @@ def decision_tree_learning(dataset: np.ndarray, depth: int):
 
   else:
 
-    return 0
+    (decision, leftData, rightData) = find_split(dataset)
 
-  return 0
+    node = TreeNode(decision, depth)
+
+    leftBranch, leftDepth = decision_tree_learning(leftData, depth+1)
+    rightBranch, rightDepth = decision_tree_learning(rightData, depth+1)
+
+    node.left = leftBranch
+    node.right = rightBranch
+
+    return (node, max(leftDepth, rightDepth))
+
+
+def find_split(dataset: np.ndarray):
+
+  decision = Decision(0, 0)
+  return (decision, 0, 0)
+  
 
 
 if __name__ == "__main__":
