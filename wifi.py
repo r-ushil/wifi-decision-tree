@@ -25,7 +25,8 @@ class TreeNode:
 def main():
 
   clean_dataset = np.loadtxt("./WIFI_db/clean_dataset.txt", dtype='int')
-  print(decision_tree_learning(clean_dataset, 0))
+  (tree, depth) = decision_tree_learning(clean_dataset, 0)
+  print(depth)
   return 0
 
 
@@ -94,7 +95,7 @@ def split_attribute(dataset: np.ndarray, attributeNo: int):
 
   noOfExamples = np.shape(dataset)[1]
 
-  for i in range(1, noOfExamples - 1):
+  for i in range(noOfExamples - 1):
 
     # sliding window of size 2
     valPair = sortedAttr[attributeNo][i:i+2]
@@ -102,11 +103,10 @@ def split_attribute(dataset: np.ndarray, attributeNo: int):
     midpoint = (valPair[0] + valPair[1]) / 2
 
     # slice sorted 2d array into two parts, seperated by i
-    leftData = sortedAttr[0:, 0:i]
-    rightData = sortedAttr[0:, i+1:]
+    leftData = sortedAttr[:, :i+1]
+    rightData = sortedAttr[:, i+1:]
 
     currIG = infoGain(sortedAttr[LABEL_INDEX], leftData[LABEL_INDEX], rightData[LABEL_INDEX])
-    
 
     # update result var if new IG is higher
     if currIG > highestIG:
@@ -125,6 +125,7 @@ def entropy(labels: np.array):
   probabilities = occurences / totalExamples
 
   entropy = 0
+
   for p in np.nditer(probabilities):
     if p != 0:
       entropy -= p * np.log2(p)
