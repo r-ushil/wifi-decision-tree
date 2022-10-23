@@ -1,3 +1,4 @@
+from cProfile import label
 import numpy as np
 
 LABEL_INDEX: int = 7
@@ -53,12 +54,48 @@ def decision_tree_learning(dataset: np.ndarray, depth: int):
 
 def find_split(dataset: np.ndarray):
 
-  entropy(np.transpose(dataset)[LABEL_INDEX])
+  # loop through every attribute, find split point and highest info gain
+  # per attribute
+
+  # keep track of split point and attribute
 
   decision = Decision(0, 0)
   return (decision, 0, 0)
   
 
+# takes in 2 row array (row 0: attribute vals, row 1: labels)
+def split_attribute(attribute: np.ndarray) -> tuple(int, np.ndarray, np.ndarray):
+
+  LABEL_INDEX = 1
+
+  # (midpoint, leftData, rightData)
+  res = (0, [[]], [[]])
+  highestIG = 0
+
+  # sort attribute by value (first row)
+  sortedAttr = attribute[:, attribute[0].argsort()]
+
+  # loop through midpoints for all adjacent vals, sliding window?
+
+  noOfAttr = np.shape(attribute)[0]
+
+  for i in range(noOfAttr - 1):
+
+    # sliding window of size 2
+    valPair = attribute[0][i:i+2]
+    midpoint = (valPair[0] + valPair[1]) / 2
+
+    # slice sorted 2d array into two parts, seperated by i
+    leftData = attribute[0:1, 0:i]
+    rightData = attribute[0:1, i+1:]
+
+    currIG = infoGain(attribute[LABEL_INDEX], leftData[LABEL_INDEX], rightData[LABEL_INDEX])
+    
+    # update result var if new IG is higher
+    if currIG > highestIG:
+      res = (midpoint, leftData, rightData)
+
+  return res
 
 def entropy(labels: np.array):
 
