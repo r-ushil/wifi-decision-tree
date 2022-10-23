@@ -1,23 +1,11 @@
-from cProfile import label
 import numpy as np
+
+from plot import plot_decision_tree, Decision, TreeNode
 
 LABEL_INDEX: int = 7
 
 
 
-class Decision:
-
-  def __init__(self, emitter: int, value: int):
-    self.emitter = emitter
-    self.value = value
-
-class TreeNode:
-
-  def __init__(self, label: Decision | int, depth: int):
-    self.left = None
-    self.right = None
-    self.label = label
-    self.depth = depth
 
 
 
@@ -26,6 +14,7 @@ def main():
 
   clean_dataset = np.loadtxt("./WIFI_db/clean_dataset.txt", dtype='int')
   (tree, depth) = decision_tree_learning(clean_dataset, 0)
+  plot_decision_tree(tree, depth)
   print(depth)
   return 0
 
