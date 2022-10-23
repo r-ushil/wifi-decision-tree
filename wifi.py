@@ -25,22 +25,22 @@ class TreeNode:
 def main():
 
   clean_dataset = np.loadtxt("./WIFI_db/clean_dataset.txt", dtype='int')
-  decision_tree_learning(clean_dataset, 0)
+  print(decision_tree_learning(clean_dataset, 0))
   return 0
 
 
 def decision_tree_learning(dataset: np.ndarray, depth: int):
 
-  labelCol = dataset[LABEL_INDEX]
+  labelCol = np.transpose(dataset)[LABEL_INDEX]
 
   # if all samples in dataset have same label (col 7)
   if np.all(labelCol[0] == labelCol):
-    return TreeNode(labelCol[0], depth)
+    return (TreeNode(labelCol[0], depth), depth)
 
   else:
 
     (decision, leftData, rightData) = find_split(dataset)
-
+     
     node = TreeNode(decision, depth)
 
     leftBranch, leftDepth = decision_tree_learning(leftData, depth+1)
@@ -57,43 +57,61 @@ def find_split(dataset: np.ndarray):
   # loop through every attribute, find split point and highest info gain
   # per attribute
 
-  # keep track of split point and attribute
+  highestIG = 0
+  splitVal = 0
+  bestAttr = -1
+  bestLeftSplit = bestRightSplit = [[]]
 
-  decision = Decision(0, 0)
-  return (decision, 0, 0)
+  datasetT = np.transpose(dataset)
+
+  for i in range(LABEL_INDEX):
+    (ig, midpoint, leftData, rightData) = split_attribute(datasetT, i)
+
+    if ig > highestIG:
+
+      highestIG = ig
+
+      bestAttr = i
+      splitVal = midpoint
+      bestLeftSplit = leftData
+      bestRightSplit = rightData
+
+  decision = Decision(bestAttr, splitVal)
+
+
+  return (decision, np.transpose(bestLeftSplit), np.transpose(bestRightSplit))
   
 
 # takes in 2 row array (row 0: attribute vals, row 1: labels)
-def split_attribute(attribute: np.ndarray) -> tuple(int, np.ndarray, np.ndarray):
+def split_attribute(dataset: np.ndarray, attributeNo: int):
 
-  LABEL_INDEX = 1
-
-  # (midpoint, leftData, rightData)
-  res = (0, [[]], [[]])
+  # (highestIG, midpoint, leftData, rightData)
+  res = (0, 0, [[]], [[]])
   highestIG = 0
 
   # sort attribute by value (first row)
-  sortedAttr = attribute[:, attribute[0].argsort()]
+  sortedAttr = dataset[:, dataset[attributeNo].argsort()]
 
-  # loop through midpoints for all adjacent vals, sliding window?
+  noOfExamples = np.shape(dataset)[1]
 
-  noOfAttr = np.shape(attribute)[0]
-
-  for i in range(noOfAttr - 1):
+  for i in range(1, noOfExamples - 1):
 
     # sliding window of size 2
-    valPair = attribute[0][i:i+2]
+    valPair = sortedAttr[attributeNo][i:i+2]
+
     midpoint = (valPair[0] + valPair[1]) / 2
 
     # slice sorted 2d array into two parts, seperated by i
-    leftData = attribute[0:1, 0:i]
-    rightData = attribute[0:1, i+1:]
+    leftData = sortedAttr[0:, 0:i]
+    rightData = sortedAttr[0:, i+1:]
 
-    currIG = infoGain(attribute[LABEL_INDEX], leftData[LABEL_INDEX], rightData[LABEL_INDEX])
+    currIG = infoGain(sortedAttr[LABEL_INDEX], leftData[LABEL_INDEX], rightData[LABEL_INDEX])
     
+
     # update result var if new IG is higher
     if currIG > highestIG:
-      res = (midpoint, leftData, rightData)
+      highestIG = currIG
+      res = (highestIG, midpoint, leftData, rightData)
 
   return res
 
@@ -108,7 +126,8 @@ def entropy(labels: np.array):
 
   entropy = 0
   for p in np.nditer(probabilities):
-    entropy -= p * np.log2(p)
+    if p != 0:
+      entropy -= p * np.log2(p)
     
   return entropy
 
