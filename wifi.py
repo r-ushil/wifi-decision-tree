@@ -24,6 +24,7 @@ class TreeNode:
 def main():
 
   clean_dataset = np.loadtxt("./WIFI_db/clean_dataset.txt", dtype='int')
+  decision_tree_learning(clean_dataset, 0)
   return 0
 
 
@@ -52,9 +53,27 @@ def decision_tree_learning(dataset: np.ndarray, depth: int):
 
 def find_split(dataset: np.ndarray):
 
+  entropy(np.transpose(dataset)[LABEL_INDEX])
+
   decision = Decision(0, 0)
   return (decision, 0, 0)
   
+
+
+def entropy(labels: np.array):
+
+  # as labels array only has values from 1-4, bincount and cut off 0
+  occurences = np.bincount(labels)[1:]
+  
+  totalExamples = np.shape(labels)[0]
+
+  probabilities = occurences / totalExamples
+
+  entropy = 0
+  for p in np.nditer(probabilities):
+    entropy -= p * np.log2(p)
+    
+  return entropy
 
 
 if __name__ == "__main__":
