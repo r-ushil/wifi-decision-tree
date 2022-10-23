@@ -76,5 +76,21 @@ def entropy(labels: np.array):
   return entropy
 
 
+def remainder(leftLabels: np.array, rightLabels: np.array):
+
+  leftTotal = np.shape(leftLabels)[0]
+  rightTotal = np.shape(rightLabels)[0]
+  combinedTotal = leftTotal + rightTotal
+
+  leftRem = (leftTotal / combinedTotal) * entropy(leftLabels)
+  rightRem = (rightTotal / combinedTotal) * entropy(rightLabels)
+
+  return leftRem + rightRem
+
+
+def infoGain(datasetLabels, leftLabels, rightLabels):
+  return entropy(datasetLabels) - remainder(leftLabels, rightLabels)
+
+
 if __name__ == "__main__":
   main()
