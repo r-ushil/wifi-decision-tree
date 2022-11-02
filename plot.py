@@ -1,5 +1,6 @@
 from typing import Optional
 import matplotlib.pyplot as plt
+import numpy as np
 
 HEIGHT_OFFSET = 5
 WIDTH_OFFSET = 50
@@ -7,23 +8,44 @@ WIDTH_OFFSET = 50
 
 class Decision:
 
-    def __init__(self, emitter: int, value: int):
+    def __init__(self, emitter: int, value):
         self.emitter = emitter
         self.value = value
 
 
 class TreeNode:
 
-    def __init__(self, label: Decision | int, left=None, right=None):
-        self.label = label
+    def __init__(self, roomOrDecision, left=None, right=None):
+        if left is None:
+            # node represents a room
+            self.room = int(roomOrDecision)
+            self.decision = None
+        else:
+            # node represents a decision
+            self.room = None
+            self.decision = roomOrDecision
 
         self.left = left
         self.right = right
 
+        # Maximum depth
         self.depth = 1 + max(
             left.depth if left else 0,
             right.depth if right else 0
         )
+
+    def is_leaf(self):
+        return self.room is not None
+
+    def get_room(self, strengths: np.array) -> int:
+        # Base case: aready at a leaf node
+        if self.is_leaf():
+            return self.room
+
+        # Otherwise, recurse based on decision.
+        tree = self.left if strengths[self.decision.emitter] < self.decision.value else self.right
+
+        return tree.get_room(strengths)
 
 
 def plot_tree_node(node: TreeNode, x: int):
