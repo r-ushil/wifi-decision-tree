@@ -1,3 +1,4 @@
+from typing import Tuple
 import numpy as np
 
 from plot import plot_decision_tree, Decision, TreeNode
@@ -5,32 +6,24 @@ from plot import plot_decision_tree, Decision, TreeNode
 LABEL_INDEX: int = 7
 
 
-
-
-
-
-
 def main():
+    clean_data = np.loadtxt("./WIFI_db/noisy_dataset.txt", dtype='float')
+    (tree, depth) = decision_tree_learning(clean_data, 0)
+    plot_decision_tree(tree, depth)
+    print(depth)
+    return 0
 
-  clean_dataset = np.loadtxt("./WIFI_db/clean_dataset.txt", dtype='int')
-  (tree, depth) = decision_tree_learning(clean_dataset, 0)
-  plot_decision_tree(tree, depth)
-  print(depth)
-  return 0
 
+def decision_tree_learning(data: np.ndarray, depth: int):
 
-def decision_tree_learning(dataset: np.ndarray, depth: int):
+    label = np.transpose(data)[LABEL_INDEX]
 
-  labelCol = np.transpose(dataset)[LABEL_INDEX]
+    # if all samples in data have same label (col 7)
+    if np.all(label[0] == label):
+        return (TreeNode(label[0], depth), depth)
 
-  # if all samples in dataset have same label (col 7)
-  if np.all(labelCol[0] == labelCol):
-    return (TreeNode(labelCol[0], depth), depth)
+    (decision, leftData, rightData) = split(data)
 
-  else:
-
-    (decision, leftData, rightData) = find_split(dataset)
-     
     node = TreeNode(decision, depth)
 
     leftBranch, leftDepth = decision_tree_learning(leftData, depth+1)
@@ -42,101 +35,99 @@ def decision_tree_learning(dataset: np.ndarray, depth: int):
     return (node, max(leftDepth, rightDepth))
 
 
-def find_split(dataset: np.ndarray):
+def split(data: np.ndarray):
 
-  # loop through every attribute, find split point and highest info gain
-  # per attribute
+    # loop through every attribute, find split point and highest info gain
+    # per attribute
 
-  highestIG = 0
-  splitVal = 0
-  bestAttr = -1
-  bestLeftSplit = bestRightSplit = [[]]
+    bestIG = 0
+    splitVal = 0
+    bestAttr = -1
+    bestLeftData = bestRightData = None
 
-  datasetT = np.transpose(dataset)
+    dataT = np.transpose(data)
 
-  for i in range(LABEL_INDEX):
-    (ig, midpoint, leftData, rightData) = split_attribute(datasetT, i)
+    for attr in range(LABEL_INDEX):
 
-    if ig > highestIG:
+        (ig, decision, leftData, rightData) = attribute_split(dataT, attr)
 
-      highestIG = ig
+        if ig > bestIG:
+            bestIG = ig
+            bestDecision = decision
+            bestLeftData = leftData
+            bestRightData = rightData
 
-      bestAttr = i
-      splitVal = midpoint
-      bestLeftSplit = leftData
-      bestRightSplit = rightData
+    return (bestDecision, np.transpose(bestLeftData), np.transpose(bestRightData))
 
-  decision = Decision(bestAttr, splitVal)
-
-
-  return (decision, np.transpose(bestLeftSplit), np.transpose(bestRightSplit))
-  
 
 # takes in 2 row array (row 0: attribute vals, row 1: labels)
-def split_attribute(dataset: np.ndarray, attributeNo: int):
+def attribute_split(dataT: np.ndarray, attr: int):
 
-  # (highestIG, midpoint, leftData, rightData)
-  res = (0, 0, [[]], [[]])
-  highestIG = 0
+    # (highestIG, midpoint, leftData, rightData)
+    # res = (0, 0, [[]], [[]])
+    res = None
+    highestIG = 0
 
-  # sort attribute by value (first row)
-  sortedAttr = dataset[:, dataset[attributeNo].argsort()]
+    # sort attribute by value (first row)
+    sortedDataT = dataT[:, dataT[attr].argsort()]
 
-  noOfExamples = np.shape(dataset)[1]
+    noOfExamples = np.shape(dataT)[1]
 
-  for i in range(noOfExamples - 1):
+    for i in range(noOfExamples - 1):
 
-    # sliding window of size 2
-    valPair = sortedAttr[attributeNo][i:i+2]
+        # sliding window of size 2]
+        valPair = sortedDataT[attr][i: i + 2]
 
-    midpoint = (valPair[0] + valPair[1]) / 2
+        midpoint = (valPair[0] + valPair[1]) / 2
 
-    # slice sorted 2d array into two parts, seperated by i
-    leftData = sortedAttr[:, :i+1]
-    rightData = sortedAttr[:, i+1:]
+        # slice sorted 2d array into two parts, seperated by i
+        leftData = sortedDataT[:, :i+1]
+        rightData = sortedDataT[:, i+1:]
 
-    currIG = infoGain(sortedAttr[LABEL_INDEX], leftData[LABEL_INDEX], rightData[LABEL_INDEX])
+        ig = infoGain(
+            sortedDataT[LABEL_INDEX], leftData[LABEL_INDEX], rightData[LABEL_INDEX])
 
-    # update result var if new IG is higher
-    if currIG > highestIG:
-      highestIG = currIG
-      res = (highestIG, midpoint, leftData, rightData)
+        # update result var if new IG is higher
+        if ig > highestIG:
+            highestIG = ig
+            res = (highestIG, midpoint, leftData, rightData)
 
-  return res
+    return res
 
-def entropy(labels: np.array):
 
-  # as labels array only has values from 1-4, bincount and cut off 0
-  occurences = np.bincount(labels)[1:]
-  
-  totalExamples = np.shape(labels)[0]
-
-  probabilities = occurences / totalExamples
-
-  entropy = 0
-
-  for p in np.nditer(probabilities):
-    if p != 0:
-      entropy -= p * np.log2(p)
-    
-  return entropy
+def infoGain(dataLabels, leftLabels, rightLabels):
+    return entropy(dataLabels) - remainder(leftLabels, rightLabels)
 
 
 def remainder(leftLabels: np.array, rightLabels: np.array):
 
-  leftTotal = np.shape(leftLabels)[0]
-  rightTotal = np.shape(rightLabels)[0]
-  combinedTotal = leftTotal + rightTotal
+    leftTotal = np.shape(leftLabels)[0]
+    rightTotal = np.shape(rightLabels)[0]
+    combinedTotal = leftTotal + rightTotal
 
-  leftRem = (leftTotal / combinedTotal) * entropy(leftLabels)
-  rightRem = (rightTotal / combinedTotal) * entropy(rightLabels)
+    leftRem = (leftTotal / combinedTotal) * entropy(leftLabels)
+    rightRem = (rightTotal / combinedTotal) * entropy(rightLabels)
 
-  return leftRem + rightRem
+    return leftRem + rightRem
 
 
-def infoGain(datasetLabels, leftLabels, rightLabels):
-  return entropy(datasetLabels) - remainder(leftLabels, rightLabels)
+def entropy(labels: np.array):
+
+    # as labels array only has values from 1-4, bincount and cut off 0
+    occurences = np.bincount(labels)[1:]
+
+    totalExamples = np.shape(labels)[0]
+
+    probabilities = occurences / totalExamples
+
+    entropy = 0
+
+    for p in np.nditer(probabilities):
+        if p != 0:
+            entropy -= p * np.log2(p)
+
+    return entropy
 
 
 if __name__ == "__main__":
-  main()
+    main()
