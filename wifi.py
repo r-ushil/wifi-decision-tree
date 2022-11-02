@@ -12,7 +12,7 @@ def main():
     for row in clean_data:
         row[LABEL_INDEX] = int(row[LABEL_INDEX])
 
-    print(cross_validate(clean_data))
+    cross_validate(clean_data)
 
     # tree = decision_tree_learning(np.transpose(clean_data))
     # # plot_decision_tree(tree, tree.depth)
@@ -129,8 +129,9 @@ def cross_validate(data: np.ndarray):
 
     splitData = np.split(data, k)
 
-    totalAccuracy = 0
-
+    totalConfusionMatrix = np.zeros((NUM_ROOMS, NUM_ROOMS))
+    totalStatistics = np.zeros((NUM_ROOMS, 4))
+    count = 0
     for i in range(1, k):
         for j in range(1, k):
             # test and validation data cannot be the same
@@ -142,13 +143,20 @@ def cross_validate(data: np.ndarray):
 
             tree = decision_tree_learning(np.transpose(validationData))
 
-            totalAccuracy += evaluate(tree, testData)
+            confusionMatrix, statistics = evaluate(tree, testData)
+            count += 1
+            totalConfusionMatrix += confusionMatrix
+            totalStatistics += statistics
 
-            break
+    # divide by number of test sets
+    print(count)
+    totalConfusionMatrix /= count
+    totalStatistics /= count
 
-        break
+    print(totalConfusionMatrix)
+    print(totalStatistics)
 
-    return totalAccuracy / k
+    return (totalConfusionMatrix, totalStatistics)
 
 
 def evaluate(tree: TreeNode, testData: np.ndarray):
@@ -195,14 +203,14 @@ def evaluate(tree: TreeNode, testData: np.ndarray):
         statistics[roomIdx][3] = 2 * (statistics[roomIdx][0] *
                                       statistics[roomIdx][1]) / (statistics[roomIdx][0] + statistics[roomIdx][1])
 
-    print("CONFUSION MATRIX")
-    print(confusionMatrix)
-    print("TOTALS")
-    print(totals)
-    print("STATISTICS")
-    print(statistics)
+    # print("CONFUSION MATRIX")
+    # print(confusionMatrix)
+    # print("TOTALS")
+    # print(totals)
+    # print("STATISTICS")
+    # print(statistics)
 
-    return 0
+    return (confusionMatrix, statistics)
 
 
 if __name__ == "__main__":
