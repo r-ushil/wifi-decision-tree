@@ -121,7 +121,7 @@ def entropy(labels: np.array):
 
 
 # data is NOT transpose (each column is an emitter)
-# WARNING: mutates data
+# WARNING: mutates data when shuffling
 def cross_validate(data: np.ndarray):
     k = 10
 
@@ -131,27 +131,20 @@ def cross_validate(data: np.ndarray):
 
     totalConfusionMatrix = np.zeros((NUM_ROOMS, NUM_ROOMS))
     totalStatistics = np.zeros((NUM_ROOMS, 4))
-    count = 0
-    for i in range(1, k):
-        for j in range(1, k):
-            # test and validation data cannot be the same
-            if i == j:
-                continue
 
-            testData = splitData[i]
-            validationData = splitData[j]
+    for i in range(0, k): 
 
-            tree = decision_tree_learning(np.transpose(validationData))
+        testData = splitData[i]
+        trainingData = np.stack(splitData[:].pop(i))
 
-            confusionMatrix, statistics = evaluate(tree, testData)
-            count += 1
-            totalConfusionMatrix += confusionMatrix
-            totalStatistics += statistics
+        tree = decision_tree_learning(np.transpose(trainingData))
+        confusionMatrix, statistics = evaluate(tree, testData)
+        totalConfusionMatrix += confusionMatrix
+        totalStatistics += statistics
 
     # divide by number of test sets
-    print(count)
-    totalConfusionMatrix /= count
-    totalStatistics /= count
+    totalConfusionMatrix /= k
+    totalStatistics /= k
 
     print(totalConfusionMatrix)
     print(totalStatistics)
@@ -166,8 +159,8 @@ def evaluate(tree: TreeNode, testData: np.ndarray):
     # and we predicted it was in room m
 
     for [*strengths, actualRoom] in testData:
-        predictedRoom = tree.get_room(strengths)
 
+        predictedRoom = tree.get_room(strengths)
         confusionMatrix[int(actualRoom) - 1][predictedRoom - 1] += 1
 
     # totals
@@ -202,13 +195,6 @@ def evaluate(tree: TreeNode, testData: np.ndarray):
                                   totals[roomIdx][1]) / np.sum(totals[roomIdx])
         statistics[roomIdx][3] = 2 * (statistics[roomIdx][0] *
                                       statistics[roomIdx][1]) / (statistics[roomIdx][0] + statistics[roomIdx][1])
-
-    # print("CONFUSION MATRIX")
-    # print(confusionMatrix)
-    # print("TOTALS")
-    # print(totals)
-    # print("STATISTICS")
-    # print(statistics)
 
     return (confusionMatrix, statistics)
 
