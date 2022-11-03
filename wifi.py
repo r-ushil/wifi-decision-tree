@@ -125,12 +125,14 @@ def entropy(labels: np.array):
 def cross_validate(data: np.ndarray):
     k = 10
 
+    np.random.seed(42) # for reproducibility
     np.random.shuffle(data)
 
     splitData = np.split(data, k)
 
     totalConfusionMatrix = np.zeros((NUM_ROOMS, NUM_ROOMS))
     totalStatistics = np.zeros((NUM_ROOMS, 4))
+    totalAccuracy = 0
 
     for i in range(0, k): 
 
@@ -138,16 +140,19 @@ def cross_validate(data: np.ndarray):
         trainingData = np.stack(splitData[:].pop(i))
 
         tree = decision_tree_learning(np.transpose(trainingData))
-        confusionMatrix, statistics = evaluate(tree, testData)
+        confusionMatrix, statistics, accuracy = evaluate(tree, testData)
         totalConfusionMatrix += confusionMatrix
         totalStatistics += statistics
+        totalAccuracy += accuracy
 
     # divide by number of test sets
     totalConfusionMatrix /= k
     totalStatistics /= k
+    totalAccuracy /= k
 
     print(totalConfusionMatrix)
     print(totalStatistics)
+    print(totalAccuracy)
 
     return (totalConfusionMatrix, totalStatistics)
 
@@ -177,8 +182,7 @@ def evaluate(tree: TreeNode, testData: np.ndarray):
         # False positive.
         totals[roomIdx][2] += np.sum(confusionMatrix[roomIdx]) - truePositive
         # False negative.
-        totals[roomIdx][3] += np.sum(np.transpose(confusionMatrix)
-                                     [roomIdx]) - truePositive
+        totals[roomIdx][3] += np.sum(confusionMatrix[:, roomIdx]) - truePositive
 
     statistics = np.zeros((NUM_ROOMS, 4))
     # statistics[n - 1][0] = precision for room n
@@ -196,7 +200,9 @@ def evaluate(tree: TreeNode, testData: np.ndarray):
         statistics[roomIdx][3] = 2 * (statistics[roomIdx][0] *
                                       statistics[roomIdx][1]) / (statistics[roomIdx][0] + statistics[roomIdx][1])
 
-    return (confusionMatrix, statistics)
+    
+    avgAccuracy = np.sum(statistics[:, 2]) / NUM_ROOMS
+    return (confusionMatrix, statistics, avgAccuracy)
 
 
 if __name__ == "__main__":
