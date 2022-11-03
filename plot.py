@@ -7,22 +7,25 @@ WIDTH_OFFSET = 50
 
 
 class Decision:
-
     def __init__(self, emitter: int, value):
         self.emitter = emitter
         self.value = value
 
+class Room:
+    def __init__(self, label: int, occurances: int):
+        self.label = label
+        self.occurances = occurances    
+
 
 class TreeNode:
-
     def __init__(self, roomOrDecision, left=None, right=None):
         if left is None:
             # node represents a room
-            self.room = int(roomOrDecision)
+            self.room: Room = roomOrDecision
             self.decision = None
         else:
             # node represents a decision
-            self.room = None
+            self.room: Room = None
             self.decision = roomOrDecision
 
         self.left = left
@@ -37,7 +40,7 @@ class TreeNode:
     def is_leaf(self):
         return self.room is not None
 
-    def get_room(self, strengths: np.array) -> int:
+    def get_room(self, strengths: np.array) -> Room:
         # Base case: aready at a leaf node
         if self.is_leaf():
             return self.room

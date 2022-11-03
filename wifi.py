@@ -1,7 +1,7 @@
 from typing import Tuple
 import numpy as np
 
-from plot import plot_decision_tree, Decision, TreeNode
+from plot import Room, plot_decision_tree, Decision, TreeNode
 
 LABEL_INDEX: int = 7
 NUM_ROOMS: int = 4
@@ -24,8 +24,9 @@ def decision_tree_learning(dataT: np.ndarray):
     labels = dataT[LABEL_INDEX]
 
     # If all labels are the same, no more decisions to be made.
+    # Return a leaf node with that label and no of occurences of that label.
     if np.all(labels[0] == labels):
-        return TreeNode(labels[0])
+        return TreeNode(Room(int(labels[0]), np.shape(labels)[0]))
 
     # Decision tree not perfect,
     (decision, leftData, rightData) = split(dataT)
@@ -165,7 +166,7 @@ def evaluate(tree: TreeNode, testData: np.ndarray):
 
     for [*strengths, actualRoom] in testData:
 
-        predictedRoom = tree.get_room(strengths)
+        predictedRoom = tree.get_room(strengths).label
         confusionMatrix[int(actualRoom) - 1][predictedRoom - 1] += 1
 
     # totals
