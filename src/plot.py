@@ -7,6 +7,7 @@ WIDTH_OFFSET = 50
 
 TreeNodeData = Union['Decision', 'Room']
 
+
 class Decision:
     def __init__(self, emitter: int, value):
         self.emitter = emitter
@@ -14,6 +15,7 @@ class Decision:
 
     def get_label_txt(self):
         return f"E{self.emitter} < {self.value}"
+
 
 class Room:
     def __init__(self, label: int, occurences: int):
@@ -76,6 +78,7 @@ class TreeNode:
 
         return 1 + l_node_count + r_node_count
 
+
 PADDING_X = 10
 PADDING_Y = 10
 LABEL_BBOX_STYLE = {
@@ -86,13 +89,17 @@ LABEL_BBOX_STYLE = {
     'pad': 1,
 }
 
+
 def _plot_dtree_node(node: TreeNode, min_x: float) -> tuple[float, tuple[float, float]]:
-    (lb_max_x, (lb_root_x, lb_root_y)) = _plot_dtree_node(node.left, min_x) if not node.is_leaf() else (min_x, (None, None))
+    (lb_max_x, (lb_root_x, lb_root_y)) = _plot_dtree_node(
+        node.left, min_x) if not node.is_leaf() else (min_x, (None, None))
     (root_x, root_y) = (lb_max_x + PADDING_X, node.depth * PADDING_Y)
 
-    plt.text(root_x, root_y, node.get_label_txt(), bbox=LABEL_BBOX_STYLE, ha='center', va='center')
+    plt.text(root_x, root_y, node.get_label_txt(),
+             bbox=LABEL_BBOX_STYLE, ha='center', va='center')
 
-    (rb_max_x, (rb_root_x, rb_root_y)) = _plot_dtree_node(node.right, root_x) if not node.is_leaf() else (root_x, (None, None))
+    (rb_max_x, (rb_root_x, rb_root_y)) = _plot_dtree_node(
+        node.right, root_x) if not node.is_leaf() else (root_x, (None, None))
 
     if not node.is_leaf():
         plt.arrow(root_x, root_y, lb_root_x - root_x, lb_root_y - root_y)
@@ -100,13 +107,14 @@ def _plot_dtree_node(node: TreeNode, min_x: float) -> tuple[float, tuple[float, 
 
     return (rb_max_x, (root_x, root_y))
 
+
 def plot_dtree(tree: TreeNode, filename: str):
     plt.figure()
 
     font_size = 100 / tree.count_nodes()
     font_size_dpi = max(600 / font_size, 180)
 
-    plt.rcParams.update({'font.size': font_size })
+    plt.rcParams.update({'font.size': font_size})
 
     (max_x, _) = _plot_dtree_node(tree, 0)
     max_y = (tree.get_depth() - 1) * PADDING_Y
@@ -128,6 +136,7 @@ def plot_dtree(tree: TreeNode, filename: str):
     plt.plot()
     plt.savefig(filename, format='png', dpi=font_size_dpi)
     plt.close()
+
 
 def plot_tree_node(node: TreeNode, x: int):
 
