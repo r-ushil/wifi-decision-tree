@@ -64,7 +64,17 @@ class TreeNode:
 
         return tree.get_room(strengths)
 
-    
+    def get_depth(self):
+        l_depth = self.left.get_depth() if isinstance(self.left, TreeNode) else 0
+        r_depth = self.right.get_depth() if isinstance(self.right, TreeNode) else 0
+
+        return 1 + max(l_depth, r_depth)
+
+    def count_nodes(self):
+        l_node_count = self.left.count_nodes() if isinstance(self.left, TreeNode) else 0
+        r_node_count = self.right.count_nodes() if isinstance(self.right, TreeNode) else 0
+
+        return 1 + l_node_count + r_node_count
 
 def plot_tree_node(node: TreeNode, x: int):
 
