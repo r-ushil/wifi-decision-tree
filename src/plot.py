@@ -48,6 +48,9 @@ class TreeNode:
             right.depth if right else 0
         )
 
+    def get_label_txt(self):
+        return self.value.get_label_txt()
+
     def is_leaf(self):
         return self.room is not None
 
