@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 from tree import TreeBranch, TreeLeaf, Decision
 
 from plot import plot_dtree
@@ -344,55 +345,17 @@ def cross_validate_pruning(data: np.ndarray):
     return (totalConfusionMatrix, totalStatistics, totalAccuracy)
 
 
-def experiment(data):
-    np.random.seed(42)
-    np.random.shuffle(data)
+def main(input_file_path):
+    data = np.loadtxt(input_file_path, dtype='float')
 
-    splitData = np.split(data, 10)
-
-    validationData = splitData[6]
-
-    trainingFolds = splitData[:]
-    del trainingFolds[6]
-
-    trainingData = np.concatenate(trainingFolds)
-
-    tree = decision_tree_learning(np.transpose(trainingData))
-    # perfect on training data
-
-    (_, _, preEval) = evaluate(tree, validationData)
-
-    pruned = prune(tree, validationData)
-    # only prunes if it improves evalutae(tree, validationData)
-
-    (_, _, postEval) = evaluate(pruned, validationData)  # higher
-
-    print("preEval")
-    print(preEval)
-    print("postEval")
-    print(postEval)
-
-
-def main():
-    clean_data = np.loadtxt("../WIFI_db/clean_dataset.txt", dtype='float')
-    noisy_data = np.loadtxt("../WIFI_db/noisy_dataset.txt", dtype='float')
-
-    # experiment(noisy_data)
-
-    # print("Clean data\n")
-    # print("Unpruned\n")
-    # cross_validate(clean_data)
-    # print("Pruned\n")
-    # cross_validate_pruning(clean_data)
-
-    print("Noisy data\n")
-    print("Unpruned\n")
-    cross_validate(noisy_data)
-    print("Pruned\n")
-    cross_validate_pruning(noisy_data)
+    print("Unpruned:\n")
+    cross_validate(data)
+    print("Pruned:\n")
+    cross_validate_pruning(data)
 
     return 0
 
 
 if __name__ == "__main__":
-    main()
+    args = sys.argv
+    main(args[1])
