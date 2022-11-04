@@ -1,2 +1,4 @@
 __pycache__
-tree.png
+out/overfit/*.png
+out/pruned/*.png
+out/unpruned/*.png

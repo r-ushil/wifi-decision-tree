@@ -1,9 +1,10 @@
 import numpy as np
 from tree import TreeBranch, TreeLeaf, Decision
 
+from plot import Room, plot_dtree, Decision, TreeNode
+
 LABEL_INDEX: int = 7
 NUM_ROOMS: int = 4
-
 
 
 def decision_tree_learning(dataT: np.ndarray):
@@ -13,7 +14,7 @@ def decision_tree_learning(dataT: np.ndarray):
     # Return a leaf node with that label and no of occurences of that label.
     if np.all(labels[0] == labels):
         room = int(labels[0])
-        return TreeLeaf(room, { room: np.shape(labels)[0] })
+        return TreeLeaf(room, {room: np.shape(labels)[0]})
 
     # Decision tree not perfect,
     (decision, leftData, rightData) = split(dataT)
@@ -113,7 +114,7 @@ def entropy(labels: np.array):
 def cross_validate(data: np.ndarray):
     k = 10
 
-    np.random.seed(42) # for reproducibility
+    np.random.seed(42)  # for reproducibility
     np.random.shuffle(data)
 
     splitData = np.split(data, k)
@@ -122,19 +123,26 @@ def cross_validate(data: np.ndarray):
     totalStatistics = np.zeros((NUM_ROOMS, 4))
     totalAccuracy = 0
 
-    for i in range(0, k): 
+    for i in range(0, k):
 
         testData = splitData[i]
         trainingFolds = splitData[:]
         del trainingFolds[i]
         trainingData = np.concatenate(trainingFolds)
 
-
         tree = decision_tree_learning(np.transpose(trainingData))
         confusionMatrix, statistics, accuracy = evaluate(tree, testData)
         totalConfusionMatrix += confusionMatrix
         totalStatistics += statistics
         totalAccuracy += accuracy
+
+        print(f"Tree ({i})")
+        print(f"  depth: {tree.get_depth()}")
+        print(f"  nodes: {tree.count_nodes()}")
+
+        overfit_tree_output_file = f'out/overfit/tree{i}.png'
+        plot_dtree(tree, overfit_tree_output_file)
+        print(f"  output to {overfit_tree_output_file}")
 
     # divide by number of test sets
     totalConfusionMatrix /= k
@@ -144,9 +152,9 @@ def cross_validate(data: np.ndarray):
     print(totalConfusionMatrix)
     print(totalStatistics)
     print(totalAccuracy)
-    
 
     return (totalConfusionMatrix, totalStatistics)
+
 
 def confusion_matrix(tree, testData: np.ndarray):
     # Makes a LABEL_INDEX * LABEL_INDEX confusion matrix
@@ -166,13 +174,14 @@ def confusion_matrix(tree, testData: np.ndarray):
         # True positive.
         totals[roomIdx][0] += truePositive
         # True negative.
-        totals[roomIdx][1] += np.sum(np.diagonal(confusionMatrix)) - truePositive
+        totals[roomIdx][1] += np.sum(np.diagonal(confusionMatrix)
+                                     ) - truePositive
         # False positive.
         totals[roomIdx][2] += np.sum(confusionMatrix[roomIdx]) - truePositive
         # False negative.
-        totals[roomIdx][3] += np.sum(confusionMatrix[:, roomIdx]) - truePositive
+        totals[roomIdx][3] += np.sum(confusionMatrix[:,
+                                     roomIdx]) - truePositive
     return confusionMatrix, totals
-
 
 
 def evaluate(tree, testData: np.ndarray):
@@ -198,8 +207,9 @@ def evaluate(tree, testData: np.ndarray):
         # Accuracy = (tp + tn) / (tp + tn + fp + fn)
         statistics[roomIdx][2] = (tp + tn) / (tp + tn + fp + fn)
         # F1 score = 2 * (precision * recall) / (precision + recall)
-        statistics[roomIdx][3] = 2 * (statistics[roomIdx][0] * statistics[roomIdx][1]) / (statistics[roomIdx][0] + statistics[roomIdx][1])
-        
+        statistics[roomIdx][3] = 2 * (statistics[roomIdx][0] * statistics[roomIdx][1]) / (
+            statistics[roomIdx][0] + statistics[roomIdx][1])
+
     avgAccuracy = np.sum(statistics[:, 2]) / NUM_ROOMS
     return (confusionMatrix, statistics, avgAccuracy)
 
@@ -209,13 +219,13 @@ def leaf_accuracy(leaf: TreeLeaf, validationData: np.ndarray):
         return 1
 
     # node is a leaf - figure out how accurate it is
-        
-    # calculate accuracy by figuring out how much 
+
+    # calculate accuracy by figuring out how much
     # of the validation data has this label
     labels = validationData[:, -1]
     correct = np.sum(labels == leaf.room)
     total = np.shape(labels)[0]
-    
+
     return correct / total
 
 
@@ -223,31 +233,35 @@ def leaf_accuracy(leaf: TreeLeaf, validationData: np.ndarray):
 def branch_accuracy(branch: TreeBranch, validationData: np.ndarray):
     if validationData.size == 0:
         return 1
-        
+
     # Node is a tree - figure out how accurate it is
-    leftValidationData, rightValidationData = split_validation(branch.decision, validationData)
+    leftValidationData, rightValidationData = split_validation(
+        branch.decision, validationData)
     leftAccuracy = leaf_accuracy(branch.left, leftValidationData)
     rightAccuracy = leaf_accuracy(branch.right, rightValidationData)
-    
+
     return (leftAccuracy + rightAccuracy) / 2
 
 # prunes decision tree against validationData
 # NOTE: Shuffles validationData
 # NOTE: mangles tree
 # returns pruned tree
+
+
 def prune(tree, validationData: np.ndarray):
     if tree.is_leaf():
         return tree
 
     # Prune children
-    leftValidationData, rightValidationData = split_validation(tree.decision, validationData)
+    leftValidationData, rightValidationData = split_validation(
+        tree.decision, validationData)
     tree.left = prune(tree.left, leftValidationData)
     tree.right = prune(tree.right, rightValidationData)
 
     # Try prune this node
     if tree.left.is_leaf() and tree.right.is_leaf():
         leafReplacingNode = tree.left.merge_leaves(tree.right)
-        
+
         # accuracy if we replace node with leaf
         leafAccuracy = leaf_accuracy(leafReplacingNode, validationData)
 
@@ -257,10 +271,8 @@ def prune(tree, validationData: np.ndarray):
         if leafAccuracy > treeAccuracy:
             # In place replaces tree with the leaf
             return leafReplacingNode
-    
-    return tree
 
-    
+    return tree
 
 
 # TODO: split it in place, then return slices for better performance
@@ -274,14 +286,14 @@ def split_validation(decision: Decision, validationData: np.ndarray):
     rightValidationData = data[data[:, col] >= val]
 
     return leftValidationData, rightValidationData
-    
+
 
 # data is NOT transpose (each column is an emitter)
 # WARNING: mutates data when shuffling
 def cross_validate_pruning(data: np.ndarray):
     k = 10
 
-    np.random.seed(42) # for reproducibility
+    np.random.seed(42)  # for reproducibility
     np.random.shuffle(data)
 
     splitData = np.split(data, k)
@@ -293,7 +305,8 @@ def cross_validate_pruning(data: np.ndarray):
 
     for i in range(0, k):
         for j in range(0, k):
-            if i==j: continue
+            if i == j:
+                continue
 
             testData = splitData[i]
             validationData = splitData[j]
@@ -307,22 +320,31 @@ def cross_validate_pruning(data: np.ndarray):
                 del trainingFolds[j]
 
             trainingData = np.concatenate(trainingFolds)
-            
-            
-            
-
-
 
             tree = decision_tree_learning(np.transpose(trainingData))
-            
 
             prune(tree, validationData)
             confusionMatrix, statistics, accuracy = evaluate(tree, testData)
-            
+
             totalConfusionMatrix += confusionMatrix
             totalStatistics += statistics
             totalAccuracy += accuracy
             count += 1
+
+            print(f"Tree ({i}_{j})")
+            print(f"  depth: {tree.get_depth()}")
+            print(f"  depth: {prunedTree.get_depth()} (pruned)")
+            print(f"  nodes: {tree.count_nodes()}")
+            print(f"  nodes: {prunedTree.count_nodes()} (pruned)")
+
+            unpruned_tree_output_file = f'out/unpruned/tree{i}_{j}.png'
+            pruned_tree_output_file = f'out/pruned/tree{i}_{j}.png'
+
+            plot_dtree(tree, unpruned_tree_output_file)
+            plot_dtree(tree, pruned_tree_output_file)
+
+            print(f"  output to {unpruned_tree_output_file}")
+            print(f"  output to {pruned_tree_output_file} (pruned)\n")
 
     # divide by number of test sets
     totalConfusionMatrix /= count
@@ -335,17 +357,18 @@ def cross_validate_pruning(data: np.ndarray):
 
     return (totalConfusionMatrix, totalStatistics, totalAccuracy)
 
+
 def experiment(data):
     np.random.seed(42)
     np.random.shuffle(data)
-    
+
     splitData = np.split(data, 10)
-            
+
     validationData = splitData[6]
 
     trainingFolds = splitData[:]
     del trainingFolds[6]
-    
+
     trainingData = np.concatenate(trainingFolds)
 
     # validationData = np.array([
@@ -368,13 +391,12 @@ def experiment(data):
     pruned = prune(tree, validationData)
     # only prunes if it improves evalutae(tree, validationData)
 
-    (_, _, postEval) = evaluate(pruned, validationData) # higher
+    (_, _, postEval) = evaluate(pruned, validationData)  # higher
 
     print("preEval")
     print(preEval)
     print("postEval")
     print(postEval)
-    
 
 
 def main():
@@ -394,8 +416,9 @@ def main():
     cross_validate(noisy_data)
     print("Pruned\n")
     cross_validate_pruning(noisy_data)
-    
+
     return 0
+
 
 if __name__ == "__main__":
     main()
