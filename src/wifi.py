@@ -1,7 +1,7 @@
 import numpy as np
 from tree import TreeBranch, TreeLeaf, Decision
 
-from plot import Room, plot_dtree, Decision, TreeNode
+from plot import plot_dtree
 
 LABEL_INDEX: int = 7
 NUM_ROOMS: int = 4
@@ -136,13 +136,8 @@ def cross_validate(data: np.ndarray):
         totalStatistics += statistics
         totalAccuracy += accuracy
 
-        print(f"Tree ({i})")
-        print(f"  depth: {tree.get_depth()}")
-        print(f"  nodes: {tree.count_nodes()}")
-
-        overfit_tree_output_file = f'out/overfit/tree{i}.png'
+        overfit_tree_output_file = f'../out/overfit/tree{i}.png'
         plot_dtree(tree, overfit_tree_output_file)
-        print(f"  output to {overfit_tree_output_file}")
 
     # divide by number of test sets
     totalConfusionMatrix /= k
@@ -331,20 +326,11 @@ def cross_validate_pruning(data: np.ndarray):
             totalAccuracy += accuracy
             count += 1
 
-            print(f"Tree ({i}_{j})")
-            print(f"  depth: {tree.get_depth()}")
-            print(f"  depth: {prunedTree.get_depth()} (pruned)")
-            print(f"  nodes: {tree.count_nodes()}")
-            print(f"  nodes: {prunedTree.count_nodes()} (pruned)")
-
-            unpruned_tree_output_file = f'out/unpruned/tree{i}_{j}.png'
-            pruned_tree_output_file = f'out/pruned/tree{i}_{j}.png'
+            unpruned_tree_output_file = f'../out/unpruned/tree{i}_{j}.png'
+            pruned_tree_output_file = f'../out/pruned/tree{i}_{j}.png'
 
             plot_dtree(tree, unpruned_tree_output_file)
             plot_dtree(tree, pruned_tree_output_file)
-
-            print(f"  output to {unpruned_tree_output_file}")
-            print(f"  output to {pruned_tree_output_file} (pruned)\n")
 
     # divide by number of test sets
     totalConfusionMatrix /= count
@@ -371,19 +357,7 @@ def experiment(data):
 
     trainingData = np.concatenate(trainingFolds)
 
-    # validationData = np.array([
-    #     [1., 1., 1., 1., 1., 1., 1., 1.],
-    #     [1., 1., 1., 1., 1., 1., 1., 2.],
-    #     ])
-
-    # trainingData = np.array([
-    #     [0., 0., 0., 0., 0., 0., 0., 1.],
-    #     [0., 0., 0., 0., 0., 0., 1., 2.],
-    #     ])
-
     tree = decision_tree_learning(np.transpose(trainingData))
-
-    print(tree)
     # perfect on training data
 
     (_, _, preEval) = evaluate(tree, validationData)
@@ -405,11 +379,11 @@ def main():
 
     # experiment(noisy_data)
 
-    print("Clean data\n")
-    print("Unpruned\n")
-    cross_validate(clean_data)
-    print("Pruned\n")
-    cross_validate_pruning(clean_data)
+    # print("Clean data\n")
+    # print("Unpruned\n")
+    # cross_validate(clean_data)
+    # print("Pruned\n")
+    # cross_validate_pruning(clean_data)
 
     print("Noisy data\n")
     print("Unpruned\n")

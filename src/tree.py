@@ -1,15 +1,23 @@
 import numpy as np
 
+
 class Decision:
     def __init__(self, emitter: int, value):
         self.emitter = emitter
         self.value = value
 
+    def get_label_txt(self):
+        return f"E[{self.emitter}] < {self.value}"
+
+
 class TreeLeaf:
     def __init__(self, room: int, roomCounts):
         self.room = room
         self.roomCounts = roomCounts
-        self.depth = 1
+
+        self.avg_depth = 1
+        self.max_depth = 1
+        self.size = 1
 
     def is_leaf(self):
         return True
@@ -29,17 +37,20 @@ class TreeLeaf:
 
         return TreeLeaf(room, roomCounts)
 
+    def get_label_txt(self):
+        return f"{self.room}"
+
+
 class TreeBranch:
     def __init__(self, decision, left, right):
         self.decision = decision
         self.left = left
         self.right = right
 
-        # Maximum depth
-        self.depth = 1 + max(
-            self.left.depth if self.left else 0,
-            self.right.depth if self.right else 0
-        )
+        # Stats
+        self.avg_depth = 1 + (self.left.avg_depth + self.right.avg_depth) / 2
+        self.max_depth = 1 + max(self.left.max_depth, self.right.max_depth)
+        self.size = 1 + self.left.size + self.right.size
 
     def is_leaf(self):
         return False
@@ -48,3 +59,6 @@ class TreeBranch:
         # Recurse based on decision.
         tree = self.left if strengths[self.decision.emitter] < self.decision.value else self.right
         return tree.get_room(strengths)
+
+    def get_label_txt(self):
+        return f"{self.decision.get_label_txt()}"
