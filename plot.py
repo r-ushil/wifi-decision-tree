@@ -12,9 +12,9 @@ class Decision:
         self.value = value
 
 class Room:
-    def __init__(self, label: int, occurances: int):
+    def __init__(self, label: int, occurences: int):
         self.label = label
-        self.occurances = occurances    
+        self.occurences = occurences    
 
 
 class TreeNode:
@@ -50,6 +50,7 @@ class TreeNode:
 
         return tree.get_room(strengths)
 
+    
 
 def plot_tree_node(node: TreeNode, x: int):
 
