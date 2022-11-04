@@ -1,29 +1,9 @@
-from typing import Tuple
 import numpy as np
-
-from plot import Room, plot_decision_tree, Decision, TreeNode
+from tree import TreeBranch, TreeLeaf, Decision
 
 LABEL_INDEX: int = 7
 NUM_ROOMS: int = 4
 
-
-def main():
-    clean_data = np.loadtxt("./WIFI_db/clean_dataset.txt", dtype='float')
-    noisy_data = np.loadtxt("./WIFI_db/noisy_dataset.txt", dtype='float')
-
-    print("Clean data\n")
-    print("Unpruned\n")
-    cross_validate(clean_data)
-    print("Pruned\n")
-    cross_validate_pruning(clean_data)
-
-    print("Noisy data\n")
-    print("Unpruned\n")
-    cross_validate(noisy_data)
-    print("Pruned\n")
-    cross_validate_pruning(noisy_data)
-    
-    return 0
 
 
 def decision_tree_learning(dataT: np.ndarray):
@@ -32,7 +12,8 @@ def decision_tree_learning(dataT: np.ndarray):
     # If all labels are the same, no more decisions to be made.
     # Return a leaf node with that label and no of occurences of that label.
     if np.all(labels[0] == labels):
-        return TreeNode(Room(int(labels[0]), np.shape(labels)[0]))
+        room = int(labels[0])
+        return TreeLeaf(room, { room: np.shape(labels)[0] })
 
     # Decision tree not perfect,
     (decision, leftData, rightData) = split(dataT)
@@ -40,7 +21,7 @@ def decision_tree_learning(dataT: np.ndarray):
     left = decision_tree_learning(leftData)
     right = decision_tree_learning(rightData)
 
-    return TreeNode(decision, left, right)
+    return TreeBranch(decision, left, right)
 
 
 def split(dataT: np.ndarray):
@@ -163,17 +144,18 @@ def cross_validate(data: np.ndarray):
     print(totalConfusionMatrix)
     print(totalStatistics)
     print(totalAccuracy)
+    
 
     return (totalConfusionMatrix, totalStatistics)
 
-def confusion_matrix(tree: TreeNode, testData: np.ndarray):
+def confusion_matrix(tree, testData: np.ndarray):
     # Makes a LABEL_INDEX * LABEL_INDEX confusion matrix
     confusionMatrix = np.zeros((NUM_ROOMS, NUM_ROOMS))
     # confusionMatrix[n - 1][m - 1] = number of times the phone was in room n,
     # and we predicted it was in room m
 
     for [*strengths, actualRoom] in testData:
-        predictedRoom = tree.get_room(strengths).label
+        predictedRoom = tree.get_room(strengths)
         confusionMatrix[int(actualRoom) - 1][predictedRoom - 1] += 1
 
     # totals
@@ -184,8 +166,7 @@ def confusion_matrix(tree: TreeNode, testData: np.ndarray):
         # True positive.
         totals[roomIdx][0] += truePositive
         # True negative.
-        totals[roomIdx][1] += np.sum(np.diagonal(confusionMatrix)
-                                     ) - truePositive
+        totals[roomIdx][1] += np.sum(np.diagonal(confusionMatrix)) - truePositive
         # False positive.
         totals[roomIdx][2] += np.sum(confusionMatrix[roomIdx]) - truePositive
         # False negative.
@@ -194,7 +175,7 @@ def confusion_matrix(tree: TreeNode, testData: np.ndarray):
 
 
 
-def evaluate(tree: TreeNode, testData: np.ndarray):
+def evaluate(tree, testData: np.ndarray):
     confusionMatrix, totals = confusion_matrix(tree, testData)
 
     statistics = np.zeros((NUM_ROOMS, 4))
@@ -223,73 +204,76 @@ def evaluate(tree: TreeNode, testData: np.ndarray):
     return (confusionMatrix, statistics, avgAccuracy)
 
 
-def prune_accuracy(node: TreeNode, validationData: np.ndarray):
-
-    # if there is no more validation data, we prune anyway
+def leaf_accuracy(leaf: TreeLeaf, validationData: np.ndarray):
     if validationData.size == 0:
-        return float('inf')
-    
-    if node.is_leaf():
-        roomIdx = node.room.label - 1
-        (_, room_totals) = confusion_matrix(node, validationData)
+        return 1
+
+    # node is a leaf - figure out how accurate it is
         
-        tp = room_totals[roomIdx][0]
-        tn = room_totals[roomIdx][1]
-        fp = room_totals[roomIdx][2]
-        fn = room_totals[roomIdx][3]
+    # calculate accuracy by figuring out how much 
+    # of the validation data has this label
+    labels = validationData[:, -1]
+    correct = np.sum(labels == leaf.room)
+    total = np.shape(labels)[0]
+    
+    return correct / total
 
-        return (tp + tn) / (tp + tn + fp + fn)
 
-
-    leftValidation, rightValidation = split_validation(node, validationData)
-    leftAccuracy = prune_accuracy(node.left, leftValidation)
-    rightAccuracy = prune_accuracy(node.right, rightValidation)
-
+# PRE: branch.left and branch.right are leaves
+def branch_accuracy(branch: TreeBranch, validationData: np.ndarray):
+    if validationData.size == 0:
+        return 1
+        
+    # Node is a tree - figure out how accurate it is
+    leftValidationData, rightValidationData = split_validation(branch.decision, validationData)
+    leftAccuracy = leaf_accuracy(branch.left, leftValidationData)
+    rightAccuracy = leaf_accuracy(branch.right, rightValidationData)
+    
     return (leftAccuracy + rightAccuracy) / 2
 
-
-def prune(tree: TreeNode, validation_data: np.ndarray):
-
-    while True:
-        (prunedTree, pruned) = prune_once(tree, validation_data)
-        if not pruned: break
-    return prunedTree
-
-def prune_once(tree: TreeNode, validation_data: np.ndarray):
+# prunes decision tree against validationData
+# NOTE: Shuffles validationData
+# NOTE: mangles tree
+# returns pruned tree
+def prune(tree, validationData: np.ndarray):
     if tree.is_leaf():
-            return (tree, False)
+        return tree
 
+    # Prune children
+    leftValidationData, rightValidationData = split_validation(tree.decision, validationData)
+    tree.left = prune(tree.left, leftValidationData)
+    tree.right = prune(tree.right, rightValidationData)
+
+    # Try prune this node
     if tree.left.is_leaf() and tree.right.is_leaf():
-        leafReplacingNode = tree.left if tree.left.room.occurences > tree.right.room.occurences else tree.right
+        leafReplacingNode = tree.left.merge_leaves(tree.right)
         
-        leafAccuracy = prune_accuracy(leafReplacingNode, validation_data)
-        treeAccuracy = prune_accuracy(tree, validation_data)
+        # accuracy if we replace node with leaf
+        leafAccuracy = leaf_accuracy(leafReplacingNode, validationData)
 
-        if leafAccuracy >= treeAccuracy:
-            return (leafReplacingNode, True)
-        else:
-            return (tree, False)
+        # accuracy if we don't
+        treeAccuracy = branch_accuracy(tree, validationData)
 
-    leftValidation, rightValidation = split_validation(tree, validation_data)
-    (tree.left, leftPruned) = prune_once(tree.left, leftValidation[:])
-    (tree.right, rightPruned) = prune_once(tree.right, rightValidation[:])
+        if leafAccuracy > treeAccuracy:
+            # In place replaces tree with the leaf
+            return leafReplacingNode
+    
+    return tree
 
-    return (tree, (leftPruned or rightPruned))
+    
 
 
+# TODO: split it in place, then return slices for better performance
+# NOTE: (Can) shuffle validationData
+def split_validation(decision: Decision, validationData: np.ndarray):
+    col = decision.emitter
+    val = decision.value
+    data = validationData
 
-# PRE: tree is not a leaf
-def split_validation(tree: TreeNode, validation_data: np.ndarray):
-    assert(tree.left is not None and tree.right is not None)
+    leftValidationData = data[data[:, col] < val]
+    rightValidationData = data[data[:, col] >= val]
 
-    col = tree.decision.emitter
-    val = tree.decision.value
-    data = validation_data
-
-    l_validation_data = data[data[:, col] < val]
-    r_validation_data = data[data[:, col] >= val]
-
-    return l_validation_data, r_validation_data
+    return leftValidationData, rightValidationData
     
 
 # data is NOT transpose (each column is an emitter)
@@ -323,10 +307,17 @@ def cross_validate_pruning(data: np.ndarray):
                 del trainingFolds[j]
 
             trainingData = np.concatenate(trainingFolds)
+            
+            
+            
+
+
 
             tree = decision_tree_learning(np.transpose(trainingData))
-            prunedTree = prune(tree, validationData)
-            confusionMatrix, statistics, accuracy = evaluate(prunedTree, testData)
+            
+
+            prune(tree, validationData)
+            confusionMatrix, statistics, accuracy = evaluate(tree, testData)
             
             totalConfusionMatrix += confusionMatrix
             totalStatistics += statistics
@@ -343,6 +334,68 @@ def cross_validate_pruning(data: np.ndarray):
     print(totalAccuracy)
 
     return (totalConfusionMatrix, totalStatistics, totalAccuracy)
+
+def experiment(data):
+    np.random.seed(42)
+    np.random.shuffle(data)
+    
+    splitData = np.split(data, 10)
+            
+    validationData = splitData[6]
+
+    trainingFolds = splitData[:]
+    del trainingFolds[6]
+    
+    trainingData = np.concatenate(trainingFolds)
+
+    # validationData = np.array([
+    #     [1., 1., 1., 1., 1., 1., 1., 1.],
+    #     [1., 1., 1., 1., 1., 1., 1., 2.],
+    #     ])
+
+    # trainingData = np.array([
+    #     [0., 0., 0., 0., 0., 0., 0., 1.],
+    #     [0., 0., 0., 0., 0., 0., 1., 2.],
+    #     ])
+
+    tree = decision_tree_learning(np.transpose(trainingData))
+
+    print(tree)
+    # perfect on training data
+
+    (_, _, preEval) = evaluate(tree, validationData)
+
+    pruned = prune(tree, validationData)
+    # only prunes if it improves evalutae(tree, validationData)
+
+    (_, _, postEval) = evaluate(pruned, validationData) # higher
+
+    print("preEval")
+    print(preEval)
+    print("postEval")
+    print(postEval)
+    
+
+
+def main():
+    clean_data = np.loadtxt("../WIFI_db/clean_dataset.txt", dtype='float')
+    noisy_data = np.loadtxt("../WIFI_db/noisy_dataset.txt", dtype='float')
+
+    # experiment(noisy_data)
+
+    print("Clean data\n")
+    print("Unpruned\n")
+    cross_validate(clean_data)
+    print("Pruned\n")
+    cross_validate_pruning(clean_data)
+
+    print("Noisy data\n")
+    print("Unpruned\n")
+    cross_validate(noisy_data)
+    print("Pruned\n")
+    cross_validate_pruning(noisy_data)
+    
+    return 0
 
 if __name__ == "__main__":
     main()
